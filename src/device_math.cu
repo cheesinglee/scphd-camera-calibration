@@ -1,13 +1,26 @@
 #include <float.h>
+#include <stdio.h>
 #include <curand_kernel.h>
 
 #include "device_math.cuh"
+#include "lu_decomposition.cuh"
 
 #define LOG0 -FLT_MAX
 
+__device__ __host__
+void print_matrix(double* A, int dims){
+    for ( int i = 0 ; i < dims ; i++){
+        for ( int j = 0 ; j < dims ; j++){
+            printf("%f ",A[i+j*dims]) ;
+        }
+        printf("\n") ;
+    }
+    printf("\n") ;
+}
+
 /// a nan-safe logarithm
 __device__ __host__
-float safeLog( float x )
+double safeLog( double x )
 {
     if ( x <= 0 )
         return LOG0 ;
@@ -16,16 +29,16 @@ float safeLog( float x )
 }
 
 /// evaluate generalized logistic function
-__device__ __host__ float
-logistic_function(float x, float lower, float upper, float beta, float tau)
+__device__ __host__ double
+logistic_function(double x, double lower, double upper, double beta, double tau)
 {
-    float y = (upper-lower)/(1+exp(-beta*(x-tau) ) ) ;
+    double y = (upper-lower)/(1+exp(-beta*(x-tau) ) ) ;
     return y ;
 }
 
 /// product of two 2x2 matrices
 __device__ void
-matmultiply2(float *A, float *B, float *X){
+matmultiply2(double *A, double *B, double *X){
     X[0] = A[0]*B[0] + A[2]*B[1] ;
     X[1] = A[1]*B[0] + A[3]*B[1] ;
     X[2] = A[0]*B[2] + A[2]*B[3] ;
@@ -33,23 +46,23 @@ matmultiply2(float *A, float *B, float *X){
 }
 
 /// determinant of a 2x2 matrix
-__host__ __device__ float
-det2(float *A){
+__host__ __device__ double
+det2(double *A){
     return A[0]*A[3] - A[2]*A[1] ;
 }
 
 /// determinant of a 3x3 matrix
-__host__ __device__ float
-det3(float *A){
+__host__ __device__ double
+det3(double *A){
     return (A[0]*A[4]*A[8] + A[3]*A[7]*A[2] + A[6]*A[1]*A[5])
         - (A[0]*A[7]*A[5] + A[3]*A[1]*A[8] + A[6]*A[4]*A[2]) ;
 }
 
 /// determinant of a 4x4 matrix
-__host__ __device__ float
-det4(float *A)
+__host__ __device__ double
+det4(double *A)
 {
-    float det=0;
+    double det=0;
     det+=A[0]*((A[5]*A[10]*A[15]+A[9]*A[14]*A[7]+A[13]*A[6]*A[11])-(A[5]*A[14]*A[11]-A[9]*A[6]*A[15]-A[13]*A[10]*A[7]));
     det+=A[4]*((A[1]*A[14]*A[11]+A[9]*A[2]*A[15]+A[13]*A[10]*A[3])-(A[1]*A[10]*A[15]-A[9]*A[14]*A[3]-A[13]*A[2]*A[11]));
     det+=A[8]*((A[1]*A[6]*A[15]+A[5]*A[14]*A[3]+A[13]*A[2]*A[7])-(A[1]*A[14]*A[7]-A[5]*A[2]*A[15]-A[13]*A[6]*A[3]));
@@ -59,9 +72,9 @@ det4(float *A)
 
 /// invert a 2x2 matrix
 __device__ __host__ void
-invert_matrix2(float *A, float *A_inv)
+invert_matrix2(double *A, double *A_inv)
 {
-    float det = det2(A) ;
+    double det = det2(A) ;
     A_inv[0] = A[3]/det ;
     A_inv[1] = -A[1]/det ;
     A_inv[2] = -A[2]/det ;
@@ -70,8 +83,8 @@ invert_matrix2(float *A, float *A_inv)
 
 /// invert a 3x3 matrix
 __device__ void
-invert_matrix3(float *A, float* A_inv){
-    float det = det3(A) ;
+invert_matrix3(double *A, double* A_inv){
+    double det = det3(A) ;
     A_inv[0] = (A[4]*A[8] - A[7]*A[5])/det ;
     A_inv[1] = (A[7]*A[2] - A[1]*A[8])/det ;
     A_inv[2] = (A[1]*A[5] - A[4]*A[2])/det ;
@@ -85,7 +98,7 @@ invert_matrix3(float *A, float* A_inv){
 
 /// invert a 4x4 matrix
 __device__ void
-invert_matrix4( float *A, float *Ainv)
+invert_matrix4( double *A, double *Ainv)
 {
     Ainv[0] = (A[5] * A[15] * A[10] - A[5] * A[11] * A[14] - A[7] * A[13] * A[10] + A[11] * A[6] * A[13] - A[15] * A[6] * A[9] + A[7] * A[9] * A[14]) / (A[0] * A[5] * A[15] * A[10] - A[0] * A[5] * A[11] * A[14] - A[0] * A[7] * A[13] * A[10] + A[0] * A[11] * A[6] * A[13] - A[0] * A[15] * A[6] * A[9] + A[0] * A[7] * A[9] * A[14] + A[5] * A[3] * A[8] * A[14] - A[5] * A[15] * A[2] * A[8] + A[5] * A[11] * A[2] * A[12] - A[5] * A[3] * A[12] * A[10] - A[15] * A[10] * A[1] * A[4] + A[15] * A[6] * A[1] * A[8] + A[15] * A[2] * A[4] * A[9] + A[3] * A[12] * A[6] * A[9] + A[7] * A[13] * A[2] * A[8] + A[7] * A[1] * A[12] * A[10] + A[3] * A[4] * A[13] * A[10] + A[11] * A[14] * A[1] * A[4] - A[11] * A[6] * A[1] * A[12] - A[11] * A[2] * A[4] * A[13] - A[3] * A[8] * A[6] * A[13] - A[7] * A[9] * A[2] * A[12] - A[7] * A[1] * A[8] * A[14] - A[3] * A[4] * A[9] * A[14]);
     Ainv[1] = -(A[15] * A[10] * A[1] - A[11] * A[14] * A[1] + A[3] * A[9] * A[14] - A[15] * A[2] * A[9] - A[3] * A[13] * A[10] + A[11] * A[2] * A[13]) / (A[0] * A[5] * A[15] * A[10] - A[0] * A[5] * A[11] * A[14] - A[0] * A[7] * A[13] * A[10] + A[0] * A[11] * A[6] * A[13] - A[0] * A[15] * A[6] * A[9] + A[0] * A[7] * A[9] * A[14] + A[5] * A[3] * A[8] * A[14] - A[5] * A[15] * A[2] * A[8] + A[5] * A[11] * A[2] * A[12] - A[5] * A[3] * A[12] * A[10] - A[15] * A[10] * A[1] * A[4] + A[15] * A[6] * A[1] * A[8] + A[15] * A[2] * A[4] * A[9] + A[3] * A[12] * A[6] * A[9] + A[7] * A[13] * A[2] * A[8] + A[7] * A[1] * A[12] * A[10] + A[3] * A[4] * A[13] * A[10] + A[11] * A[14] * A[1] * A[4] - A[11] * A[6] * A[1] * A[12] - A[11] * A[2] * A[4] * A[13] - A[3] * A[8] * A[6] * A[13] - A[7] * A[9] * A[2] * A[12] - A[7] * A[1] * A[8] * A[14] - A[3] * A[4] * A[9] * A[14]);
@@ -108,7 +121,7 @@ invert_matrix4( float *A, float *Ainv)
 /// Lower Cholesky decomposition of a square matrix.
 /// No check for positive-definiteness is performed.
 __device__ __host__
-void cholesky(float* A, float* L, int dims){
+void cholesky(double* A, double* L, int dims){
     for ( int i = 0; i < dims*dims ; i++ )
         L[i] = 0.0 ;
 
@@ -116,7 +129,7 @@ void cholesky(float* A, float* L, int dims){
     for (int i = 0 ; i < dims ; i++){
         for ( int j = 0 ; j <= i ; j++){
             int ij = i + j*dims ;
-            float tmp = A[ij] ;
+            double tmp = A[ij] ;
             if ( i == j ){
                 for (int k = 0 ; k < j ; k++){
                     int jk = j + k*dims ;
@@ -138,12 +151,12 @@ void cholesky(float* A, float* L, int dims){
 }
 
 __device__ __host__ void
-triangular_inverse(float *L, float *Linv, int dims){
+triangular_inverse(double *L, double *Linv, int dims){
     // solve for the columns of the inverse using forward substitution
     for (int col = 0 ; col < dims ; col++ ){
         for ( int i = 0 ; i < dims ; i++ ){
             if ( i >= col ){
-                float val ;
+                double val ;
                 if ( i == col )
                     val = 1 ;
                 else
@@ -161,44 +174,91 @@ triangular_inverse(float *L, float *Linv, int dims){
     }
 }
 
-__device__ float
-evalGaussian(Gaussian2D g, float2 p){
+__device__ __host__ void
+triangular_inverse_upper(double *U, double *Uinv, int dims){
+    // solve for the columns of the inverse using backward substitution
+    for (int col = dims-1 ; col >= 0  ; col-- ){
+        for ( int i = dims-1 ; i >= 0  ; i-- ){
+            if ( i <= col ){
+                double val ;
+                if ( i == col )
+                    val = 1 ;
+                else
+                    val = 0 ;
+
+                for( int j = dims-1 ; j > i ; j-- )
+                    val -= U[i + j*dims]*Uinv[j+col*dims] ;
+
+                Uinv[i+col*dims] = val/U[i+i*dims] ;
+            }
+            else{
+                Uinv[i+col*dims] = 0.0 ;
+            }
+        }
+    }
+}
+
+/// evaluate the product x*A*x'
+__device__ __host__ double
+quadratic_matrix_product(double* A, double *x, int dims){
+    double result = 0 ;
+    for ( int i = 0 ; i < dims ; i++){
+        double val = 0 ;
+        for ( int j = 0 ; j < dims ; j++ ){
+            val += x[j]*A[i+j*dims] ;
+        }
+        result += x[i]*val ;
+    }
+    return result ;
+}
+
+__device__ __host__ void
+fill_identity_matrix(double* A, int dims){
+    for ( int i = 0; i < dims ;i++){
+        for(int j =0; j < dims ;j++){
+            A[i+j*dims] = (i==j) ;
+        }
+    }
+}
+
+__device__ double
+evalGaussian(Gaussian2D g, double2 p){
     // distance from mean
-    float d[2] ;
+    double d[2] ;
     d[0] = g.mean[0] - p.x ;
     d[1] = g.mean[1] - p.y ;
 
     // inverse covariance matrix
-    float S_inv[4] ;
+    double S_inv[4] ;
     invert_matrix2(g.cov,S_inv);
 
     // determinant of covariance matrix
-    float det_S = det2(g.cov) ;
+    double det_S = det2(g.cov) ;
 
     // compute exponential
-    float exponent = 0.5*(d[0]*d[0]*S_inv[0]
+    double exponent = 0.5*(d[0]*d[0]*S_inv[0]
             + d[0]*d[1]*(S_inv[1]+S_inv[2])
             + d[1]*d[1]*S_inv[3]) ;
 
     return exp(exponent)/sqrt(det_S)/(2*M_PI)*g.weight ;
 }
 
-__device__ float
-evalLogGaussian(Gaussian2D g, float*p){
+__device__ double
+evalLogGaussian(Gaussian2D g, double*p){
     // distance from mean
-    float d[2] ;
+    double d[2] ;
     d[0] = g.mean[0] - p[0] ;
     d[1] = g.mean[1] - p[1] ;
 
     // inverse covariance matrix
-    float S_inv[4] ;
+    double S_inv[4] ;
     invert_matrix2(g.cov,S_inv);
 
     // determinant of covariance matrix
-    float det_S = det2(g.cov) ;
+    double det_S = det2(g.cov) ;
 
     // compute exponential
-    float exponent = 0.5*(d[0]*d[0]*S_inv[0]
+    double exponent = 0.5*(d[0]*d[0]*S_inv[0]
             + d[0]*d[1]*(S_inv[1]+S_inv[2])
             + d[1]*d[1]*S_inv[3]) ;
 
@@ -210,8 +270,8 @@ template<class GaussianType>
 __device__ __host__ int
 getGaussianDim(GaussianType g)
 {
-//    int dims = sizeof(g.mean)/sizeof(float) ;
-    return g.dims ;
+    return int(sizeof(g.mean)/sizeof(double)) ;
+//    return g.dims ;
 }
 
 template<class GaussianType>
@@ -245,10 +305,10 @@ clearGaussian(GaussianType &a)
 }
 
 /// wrap an angular value to the range [-pi,pi]
-__host__ __device__ float
-wrapAngle(float a)
+__host__ __device__ double
+wrapAngle(double a)
 {
-    float remainder = fmod(a, float(2*M_PI)) ;
+    double remainder = fmod(a, double(2*M_PI)) ;
     if ( remainder > M_PI )
         remainder -= 2*M_PI ;
     else if ( remainder < -M_PI )
@@ -258,10 +318,10 @@ wrapAngle(float a)
 
 /// return the closest symmetric positve definite matrix for 2x2 input
 __device__ void
-makePositiveDefinite( float A[4] )
+makePositiveDefinite( double A[4] )
 {
     // eigenvalues:
-    float detA = A[0]*A[3] + A[1]*A[2] ;
+    double detA = A[0]*A[3] + A[1]*A[2] ;
     // check if already positive definite
     if ( detA > 0 && A[0] > 0 )
     {
@@ -269,13 +329,13 @@ makePositiveDefinite( float A[4] )
         A[2] = A[1] ;
         return ;
     }
-    float trA = A[0] + A[3] ;
-    float trA2 = trA*trA ;
-    float eval1 = 0.5*trA + 0.5*sqrt( trA2 - 4*detA ) ;
-    float eval2 = 0.5*trA - 0.5*sqrt( trA2 - 4*detA ) ;
+    double trA = A[0] + A[3] ;
+    double trA2 = trA*trA ;
+    double eval1 = 0.5*trA + 0.5*sqrt( trA2 - 4*detA ) ;
+    double eval2 = 0.5*trA - 0.5*sqrt( trA2 - 4*detA ) ;
 
     // eigenvectors:
-    float Q[4] ;
+    double Q[4] ;
     if ( fabs(A[1]) > 0 )
     {
         Q[0] = eval1 - A[3] ;
@@ -312,29 +372,78 @@ makePositiveDefinite( float A[4] )
 }
 
 template <int N, int N2>
-__device__ float
+__device__ double
 computeMahalDist(Gaussian<N,N2> a, Gaussian<N,N2> b){
     // innovation vector
-    float innov[N] ;
+    double innov[N] ;
     for ( int i = 0 ; i < N ; i++ )
         innov[i] = a.mean[i] - b.mean[i] ;
 
     // innovation covariance
-    float L[N2] ;
-    float sigma[N2] ;
-    for (int i = 0 ; i < N ; i++)
-        sigma[i] = (a.cov[i]+b.cov[i])/2 ;
+    double sigma[N2] ;
+//    double trace_a = 0 ;
+//    double trace_b = 0 ;
 
-    // cholesky decomposition and inverse
+//    for ( int i = 0 ; i < N ; i++){
+//        trace_a += a.cov[i+i*N] ;
+//        trace_b += b.cov[i+i*N] ;
+//    }
+
+//    if (trace_a < trace_b){
+//        for (int i = 0 ; i < N2 ; i++)
+//            sigma[i] = a.cov[i] ;
+//    }
+//    else{
+//        for (int i = 0 ; i < N2 ; i++)
+//            sigma[i] = b.cov[i] ;
+//    }
+
+    for (int i = 0 ; i < N2 ; i++)
+        sigma[i] = a.cov[i] + b.cov[i] ;
+
+//    // LU decomposition and inverse
+//    double L[N2] ;
+//    double U[N2] ;
+//    double P[N2] ;
+//    double AA[N2] ;
+//    mat_LU(sigma,L,U,P,AA,N) ;
+
+//    double Linv[N2] ;
+//    double Uinv[N2] ;
+//    triangular_inverse(L,Linv,N) ;
+//    triangular_inverse_upper(U,Uinv,N) ;
+
+//    // re-use matrices L and U for intermediate product storage
+//    double tmp[N2] ; double tmp2[N2] ;
+//    mat_mul(Uinv,Linv,tmp,N);
+//    mat_mul(tmp,P,tmp2,N) ;
+
+////    if (threadIdx.x == 4){
+////        print_matrix(sigma,N);
+////        print_matrix(L,N);
+////        print_matrix(U,N);
+////        print_matrix(P,N);
+////        print_matrix(Linv,N);
+////        print_matrix(Uinv,N);
+////        print_matrix(tmp,N);
+////        print_matrix(tmp2,N);
+
+////    }
+
+//    return quadratic_matrix_product(tmp2,innov,N) ;
+
+    double L[N2] ;
     cholesky(sigma,L,N);
-    float Linv[N2] ;
+
+    double Linv[N2] ;
     triangular_inverse(L,Linv,N) ;
+
 
     // multiply innovation with inverse L
     // distance is sum of squares
-    float dist = 0 ;
+    double dist = 0 ;
     for ( int i = 0 ; i < N ; i++ ){
-        float sum = 0 ;
+        double sum = 0 ;
         for ( int j = 0 ; j <= i ; j++){
             sum += innov[j]*Linv[i+j*N] ;
         }
@@ -344,16 +453,16 @@ computeMahalDist(Gaussian<N,N2> a, Gaussian<N,N2> b){
 }
 
 /// compute the Mahalanobis distance between two Gaussians
-__device__ float
+__device__ double
 computeMahalDist(Gaussian2D a, Gaussian2D b)
 {
-    float dist = 0 ;
-    float sigma_inv[4] ;
-    float sigma[4] ;
+    double dist = 0 ;
+    double sigma_inv[4] ;
+    double sigma[4] ;
     for (int i = 0 ; i <4 ; i++)
         sigma[i] = (a.cov[i] + b.cov[i])/2 ;
     invert_matrix2(sigma,sigma_inv);
-    float innov[2] ;
+    double innov[2] ;
     innov[0] = a.mean[0] - b.mean[0] ;
     innov[1] = a.mean[1] - b.mean[1] ;
     dist = innov[0]*innov[0]*sigma_inv[0] +
@@ -362,16 +471,16 @@ computeMahalDist(Gaussian2D a, Gaussian2D b)
     return dist ;
 }
 
-__device__ float
+__device__ double
 computeMahalDist(Gaussian3D a, Gaussian3D b)
 {
-    float dist = 0 ;
-    float sigma_inv[9] ;
-    float sigma[9] ;
+    double dist = 0 ;
+    double sigma_inv[9] ;
+    double sigma[9] ;
     for (int i = 0 ; i <9 ; i++)
         sigma[i] = (a.cov[i] + b.cov[i])/2 ;
     invert_matrix3(sigma,sigma_inv);
-    float innov[3] ;
+    double innov[3] ;
     innov[0] = a.mean[0] - b.mean[0] ;
     innov[1] = a.mean[1] - b.mean[1] ;
     innov[2] = a.mean[1] - b.mean[1] ;
@@ -381,16 +490,16 @@ computeMahalDist(Gaussian3D a, Gaussian3D b)
     return dist ;
 }
 
-__device__ float
+__device__ double
 computeMahalDist(Gaussian4D a, Gaussian4D b)
 {
-    float dist = 0 ;
-    float sigma_inv[16] ;
-    float sigma[16] ;
+    double dist = 0 ;
+    double sigma_inv[16] ;
+    double sigma[16] ;
     for (int i = 0 ; i < 16 ; i++)
         sigma[i] = (a.cov[i] + b.cov[i])/2 ;
     invert_matrix4(sigma,sigma_inv) ;
-    float innov[4] ;
+    double innov[4] ;
     for ( int i = 0 ; i < 4 ; i++ )
         innov[i] = a.mean[i] - b.mean[i] ;
     dist = innov[0]*(sigma_inv[0]*innov[0] + sigma_inv[4]*innov[1] + sigma_inv[8]*innov[2] + sigma_inv[12]*innov[3])
@@ -402,20 +511,20 @@ computeMahalDist(Gaussian4D a, Gaussian4D b)
 
 /// Compute the Hellinger distance between two Gaussians
 template <class T>
-__device__ float
+__device__ double
 computeHellingerDist(T a, T b)
 {
     return 0 ;
 }
 
-__device__ float
+__device__ double
 computeHellingerDist( Gaussian2D a, Gaussian2D b)
 {
-    float dist = 0 ;
-    float innov[2] ;
-    float sigma[4] ;
-    float detSigma ;
-    float sigmaInv[4] = {1,0,0,1} ;
+    double dist = 0 ;
+    double innov[2] ;
+    double sigma[4] ;
+    double detSigma ;
+    double sigmaInv[4] = {1,0,0,1} ;
     innov[0] = a.mean[0] - b.mean[0] ;
     innov[1] = a.mean[1] - b.mean[1] ;
     sigma[0] = a.cov[0] + b.cov[0] ;
@@ -430,7 +539,7 @@ computeHellingerDist( Gaussian2D a, Gaussian2D b)
         sigmaInv[2] = -sigma[2]/detSigma ;
         sigmaInv[3] = sigma[0]/detSigma ;
     }
-    float epsilon = -0.25*
+    double epsilon = -0.25*
             (innov[0]*innov[0]*sigmaInv[0] +
              innov[0]*innov[1]*(sigmaInv[1]+sigmaInv[2]) +
              innov[1]*innov[1]*sigmaInv[3]) ;
@@ -452,7 +561,7 @@ computeHellingerDist( Gaussian2D a, Gaussian2D b)
 
 
 //__device__ void
-//cholesky( float*A, float* L, int size)
+//cholesky( double*A, double* L, int size)
 //{
 //    int i = size ;
 //    int n_elements = 0 ;
@@ -488,7 +597,7 @@ computeHellingerDist( Gaussian2D a, Gaussian2D b)
   \param tid thread index
   */
 __device__ void
-sumByReduction( volatile float* sdata, float mySum, const unsigned int tid )
+sumByReduction( volatile double* sdata, double mySum, const unsigned int tid )
 {
     sdata[tid] = mySum;
     __syncthreads();
@@ -520,7 +629,7 @@ sumByReduction( volatile float* sdata, float mySum, const unsigned int tid )
   \param tid thread index
   */
 __device__ void
-productByReduction( volatile float* sdata, float my_factor, const unsigned int tid )
+productByReduction( volatile double* sdata, double my_factor, const unsigned int tid )
 {
     sdata[tid] = my_factor;
     __syncthreads();
@@ -552,7 +661,7 @@ productByReduction( volatile float* sdata, float my_factor, const unsigned int t
   \param tid thread index
   */
 __device__ void
-maxByReduction( volatile float* sdata, float val, const unsigned int tid )
+maxByReduction( volatile double* sdata, double val, const unsigned int tid )
 {
     sdata[tid] = val ;
     __syncthreads();
@@ -573,11 +682,11 @@ maxByReduction( volatile float* sdata, float val, const unsigned int tid )
     __syncthreads() ;
 }
 
-__device__ float
-logsumexpByReduction( volatile float* sdata, float val, const unsigned int tid )
+__device__ double
+logsumexpByReduction( volatile double* sdata, double val, const unsigned int tid )
 {
     maxByReduction( sdata, val, tid ) ;
-    float maxval = sdata[0] ;
+    double maxval = sdata[0] ;
     __syncthreads() ;
 
     sumByReduction( sdata, exp(val-maxval), tid) ;
@@ -627,6 +736,81 @@ void force_symmetric_covariance(GaussianType &g)
     }
 }
 
+template<typename T>
+__device__ __host__
+T clampValue(T val, T clamp_val, bool above){
+    T clamped = 0 ;
+
+    if (clamp_val < 0){
+        clamp_val = -clamp_val ;
+    }
+
+    bool do_clamp = false ;
+    if (above)
+        do_clamp = (fabs(val) > clamp_val) ;
+    else
+        do_clamp = (fabs(val) < clamp_val) ;
+
+    if (do_clamp)
+    {
+        if (val >= 0)
+            clamped = clamp_val ;
+        else
+            clamped = -clamp_val ;
+    }
+    return clamped ;
+}
+
+template <int N, int N2>
+__device__ __host__ bool
+checkNan(Gaussian<N,N2> g){
+    bool ret = false ;
+    if ( isnan(g.weight) ){
+        ret = true  ;
+    }
+    else{
+        for (int i = 0 ; i < N2 ; i++){
+            if ( i < N && isnan(g.mean[i]) ){
+                ret = true  ;
+                break ;
+            }
+            else if ( isnan(g.cov[i]) ){
+                ret = true ;
+                break ;
+            }
+        }
+    }
+
+    if (ret){
+        printf("nan feature detected\n") ;
+        printf("w = %f, m =",g.weight) ;
+        for ( int n = 0 ; n < N ; n++)
+            printf(" %f",g.mean[n]) ;
+        printf("\n") ;
+        print_matrix(g.cov,N);
+    }
+
+    return ret ;
+}
+
+
+/// Test for positive definiteness.
+/// Attempts a cholesky decomposition on covariance matrix
+/// and checks that resulting decomposition is valid
+template <int N, int N2>
+__device__ __host__ bool
+isPosDef(Gaussian<N,N2> g){
+    double L[N2] ;
+    cholesky(g.cov, L, N);
+
+    for ( int i = 0 ; i < N2 ; i++ )
+    {
+        if ( isnan(L[i]) )
+            return false ;
+    }
+    return true ;
+}
+
 // explicit template instantiation
 template __device__ __host__
 void force_symmetric_covariance(Gaussian6D &g) ;
@@ -634,9 +818,18 @@ void force_symmetric_covariance(Gaussian6D &g) ;
 template __device__ __host__ void
 clearGaussian(Gaussian6D &g) ;
 
-template __device__ float
+template __device__ double
 computeMahalDist(Gaussian6D a, Gaussian6D b) ;
 
 template __device__ __host__ void
 copy_gaussians(Gaussian6D &src, Gaussian6D &dest) ;
+
+template __device__ __host__ double
+clampValue(double val, double abs_max, bool above) ;
+
+template __device__ __host__ bool
+checkNan(Gaussian6D g) ;
+
+template __device__ __host__ bool
+isPosDef(Gaussian6D g) ;
 

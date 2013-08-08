@@ -4,43 +4,46 @@
 #include "types.h"
 
 __device__ __host__
-float safeLog( float x ) ;
-
-__device__ __host__ float
-logistic_function(float x, float lower, float upper, float beta, float tau) ;
-
-__device__ void
-matmultiply2(float *A, float *B, float *X) ;
-
-__host__ __device__ float
-det2(float *A) ;
-
-__host__ __device__ float
-det3(float *A) ;
-
-__host__ __device__ float
-det4(float *A) ;
-
-__device__ __host__ void
-invert_matrix2(float *A, float *A_inv) ;
-
-__device__ void
-invert_matrix3(float *A, float* A_inv) ;
-
-__device__ void
-invert_matrix4( float *A, float *Ainv) ;
+void print_matrix(double* A, int dims) ;
 
 __device__ __host__
-void cholesky(float* A, float* L, int dims) ;
+double safeLog( double x ) ;
+
+__device__ __host__ double
+logistic_function(double x, double lower, double upper, double beta, double tau) ;
+
+__device__ void
+matmultiply2(double *A, double *B, double *X) ;
+
+__host__ __device__ double
+det2(double *A) ;
+
+__host__ __device__ double
+det3(double *A) ;
+
+__host__ __device__ double
+det4(double *A) ;
 
 __device__ __host__ void
-triangular_inverse(float *L, float *Linv, int dims) ;
+invert_matrix2(double *A, double *A_inv) ;
 
-__device__ float
-evalGaussian(Gaussian2D g, float2 p) ;
+__device__ void
+invert_matrix3(double *A, double* A_inv) ;
 
-__device__ float
-evalLogGaussian(Gaussian2D g, float*p) ;
+__device__ void
+invert_matrix4( double *A, double *Ainv) ;
+
+__device__ __host__
+void cholesky(double* A, double* L, int dims) ;
+
+__device__ __host__ void
+triangular_inverse(double *L, double *Linv, int dims) ;
+
+__device__ double
+evalGaussian(Gaussian2D g, double2 p) ;
+
+__device__ double
+evalLogGaussian(Gaussian2D g, double*p) ;
 
 template<class GaussianType>
 __device__ __host__ int
@@ -54,43 +57,43 @@ template<class GaussianType>
 __device__ __host__ void
 clearGaussian(GaussianType &a) ;
 
-__host__ __device__ float
-wrapAngle(float a) ;
+__host__ __device__ double
+wrapAngle(double a) ;
 
 __device__ void
-makePositiveDefinite( float A[4] ) ;
+makePositiveDefinite( double A[4] ) ;
 
 template <int N, int N2>
-__device__ float
+__device__ double
 computeMahalDist(Gaussian<N,N2> a, Gaussian<N,N2> b) ;
 
-__device__ float
+__device__ double
 computeMahalDist(Gaussian2D a, Gaussian2D b) ;
 
-__device__ float
+__device__ double
 computeMahalDist(Gaussian3D a, Gaussian3D b) ;
 
-__device__ float
+__device__ double
 computeMahalDist(Gaussian4D a, Gaussian4D b) ;
 
 template <class T>
-__device__ float
+__device__ double
 computeHellingerDist(T a, T b) ;
 
-__device__ float
+__device__ double
 computeHellingerDist( Gaussian2D a, Gaussian2D b) ;
 
 __device__ void
-sumByReduction( volatile float* sdata, float mySum, const unsigned int tid ) ;
+sumByReduction( volatile double* sdata, double mySum, const unsigned int tid ) ;
 
 __device__ void
-productByReduction( volatile float* sdata, float my_factor, const unsigned int tid ) ;
+productByReduction( volatile double* sdata, double my_factor, const unsigned int tid ) ;
 
 __device__ void
-maxByReduction( volatile float* sdata, float val, const unsigned int tid ) ;
+maxByReduction( volatile double* sdata, double val, const unsigned int tid ) ;
 
-__device__ float
-logsumexpByReduction( volatile float* sdata, float val, const unsigned int tid ) ;
+__device__ double
+logsumexpByReduction( volatile double* sdata, double val, const unsigned int tid ) ;
 
 __device__ __host__
 int sub_to_idx(int row, int col, int dim) ;
@@ -102,5 +105,17 @@ void copy_gaussians(GaussianType &src, GaussianType &dest) ;
 template<class GaussianType>
 __device__ __host__
 void force_symmetric_covariance(GaussianType &g) ;
+
+template<typename T>
+__device__ __host__
+T clampValue(T val, T abs_max, bool above = true) ;
+
+template <int N, int N2>
+__device__ __host__ bool
+checkNan(Gaussian<N,N2> g) ;
+
+template <int N, int N2>
+__device__ __host__ bool
+isPosDef(Gaussian<N,N2> g) ;
 
 #endif // DEVICE_MATH_H

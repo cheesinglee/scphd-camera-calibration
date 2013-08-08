@@ -8,19 +8,22 @@ SOURCES += \
     src/scphdcameracalibration.cu \
     src/kernels.cu \
     src/disparitymeasurementmodel.cu \
-    src/device_math.cu
+    src/device_math.cu \
+    src/lu_decomposition.cu \
+    src/thrust_operators.cu
 
 HEADERS += \
     src/types.h \
     src/disparitymeasurementmodel.cuh \
     src/linearcvmotionmodel3d.cuh \
     src/device_math.cuh \
-    src/OrientedLinearCVMotionModel3D.h \
     src/kernels.cuh \
-    src/scphdcameracalibration.cuh
+    src/scphdcameracalibration.cuh \
+    src/OrientedLinearCVMotionModel3D.cuh \
+    src/lu_decomposition.cuh
 
-QMAKE_CC = gcc-4.3
-QMAKE_CXX = g++-4.3
+QMAKE_CC = gcc
+QMAKE_CXX = g++
 QMAKE_CXXFLAGS += -DDEBUG
 QMAKE_CXXFLAGS += -O0 -g
 QMAKE_CXXFLAGS += -Wall -Wno-deprecated -fpic -DOC_NEW_STYLE_INCLUDES -fpermissive -fno-strict-aliasing
@@ -34,43 +37,49 @@ SOURCES -= \
     src/device_math.cu \
     src/scphdcameracalibration.cu \
     src/kernels.cu \
-    src/disparitymeasurementmodel.cu
+    src/lu_decomposition.cu \
+    src/disparitymeasurementmodel.cu \
+    src/thrust_operators.cu
 
 CUDA_SOURCES += \
     src/device_math.cu \
     src/disparitymeasurementmodel.cu \
     src/kernels.cu \
-    src/scphdcameracalibration.cu
+    src/scphdcameracalibration.cu \
+    src/lu_decomposition.cu \
+    src/thrust_operators.cu
 
 
 CUDA_LIBS = $$LIBS
 
 # Path to cuda SDK install
-CUDA_SDK = /opt/cuda/samples
+CUDA_SDK = /home/cheesinglee/cuda-sdk
 
 # Path to cuda toolkit install
-CUDA_DIR = /opt/cuda
+CUDA_DIR = $$system(dirname `which nvcc`)/..
 
 # GPU architecture
-CUDA_GENCODE = -gencode=arch=compute_20,code=sm_20 -gencode=arch=compute_30,code=sm_30
+CUDA_GENCODE = -gencode=arch=compute_20,code=sm_20
+#CUDA_GENCODE = -gencode=arch=compute_30,code=sm_30
 
 # nvcc flags (ptxas option verbose is always useful)
-CUDA_GCC_BINDIR=/opt/gcc-4.3
-NVCCFLAGS = --verbose \
+#CUDA_GCC_BINDIR=/opt/gcc-4.3
+CUDA_GCC_BINDIR=/usr/lib/nvidia-cuda-toolkit/bin
+NVCCFLAGS = \
     --compiler-options -fno-strict-aliasing \
     --compiler-bindir=$$CUDA_GCC_BINDIR  \
-#    --ptxas-options --verbose
+    --ptxas-options=-O0,-v\
 
 # include paths
-INCLUDEPATH += $$CUDA_DIR/include/cuda/
-INCLUDEPATH += $$CUDA_DIR/include/
+#INCLUDEPATH += $$CUDA_DIR/include/cuda/
+#INCLUDEPATH += $$CUDA_DIR/include/
 INCLUDEPATH += $$CUDA_SDK/common/inc/
 # lib dirs
-QMAKE_LIBDIR += $$CUDA_DIR/lib64
+#QMAKE_LIBDIR += $$CUDA_DIR/lib64
 QMAKE_LIBDIR += $$CUDA_SDK/lib
 QMAKE_LIBDIR += $$CUDA_SDK/common/lib
-# libs - note than i'm using a x_86_64 machine
-LIBS += -lcudart
+# libs
+LIBS += -lcudart -lnvToolsExt
 # join the includes in a line
 CUDA_INC = $$join(INCLUDEPATH,' -I','-I',' ')
 
@@ -78,7 +87,7 @@ CUDA_INC = $$join(INCLUDEPATH,' -I','-I',' ')
 cuda.input = CUDA_SOURCES
 cuda.output = ${OBJECTS_DIR}${QMAKE_FILE_BASE}_cuda.o
 
-cuda.commands = $$CUDA_DIR/bin/nvcc -m64 -g -G -DTHRUST_DEBUG -O0 $$CUDA_GENCODE -dc $$NVCCFLAGS $$CUDA_INC $$CUDA_LIBS  ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT} \
+cuda.commands = $$CUDA_DIR/bin/nvcc -g -G -DTHRUST_DEBUG -DDEBUG -m64 $$CUDA_GENCODE -dc $$NVCCFLAGS $$CUDA_INC $$CUDA_LIBS  ${QMAKE_FILE_NAME} -o ${QMAKE_FILE_OUT} \
 
 cuda.dependcy_type = TYPE_C
 cuda.depend_command = $$CUDA_DIR/bin/nvcc -g -G -M $$CUDA_INC $$NVCCFLAGS ${QMAKE_FILE_NAME}

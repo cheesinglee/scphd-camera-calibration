@@ -10,18 +10,19 @@
 #endif
 
 typedef struct{
-    float x ;
-    float y ;
-    float z ;
+    double x ;
+    double y ;
+    double z ;
 } Point3D ;
 
 template <int N, int N2>
 class Gaussian{
 public:
-    float weight ;
-    float mean[N] ;
-    float cov[N2] ;
+    double weight ;
+    double mean[N] ;
+    double cov[N2] ;
     int dims ;
+
 
 //    CUDA_CALLABLE_MEMBER
 //    Gaussian(){
@@ -52,22 +53,22 @@ typedef Gaussian<4,16> Gaussian4D ;
 typedef Gaussian<6,36> Gaussian6D ;
 
 typedef struct{
-    float x ;
-    float y ;
-    float z ;
-    float vx ;
-    float vy ;
-    float vz ;
+    double x ;
+    double y ;
+    double z ;
+    double vx ;
+    double vy ;
+    double vz ;
 } EuclideanPoint ;
 
 class DisparityPoint{
 public:
-    float u ;
-    float v ;
-    float d ;
-    float vu ;
-    float vv ;
-    float vd ;
+    double u ;
+    double v ;
+    double d ;
+    double vu ;
+    double vv ;
+    double vd ;
 
     CUDA_CALLABLE_MEMBER
     DisparityPoint operator-(DisparityPoint other){

@@ -1,24 +1,24 @@
 #include "disparitymeasurementmodel.cuh"
-
+#include "stdio.h"
 __host__ __device__
 EuclideanPoint
 transformWorldToCamera(EuclideanPoint p_world, Extrinsics e){
-    float X = p_world.x ;
-    float Y = p_world.y ;
-    float Z = p_world.z ;
-    float VX = p_world.vx ;
-    float VY = p_world.vy ;
-    float VZ = p_world.vz ;
+    double X = p_world.x ;
+    double Y = p_world.y ;
+    double Z = p_world.z ;
+    double VX = p_world.vx ;
+    double VY = p_world.vy ;
+    double VZ = p_world.vz ;
 
-    float x = e.cartesian.x ;
-    float y = e.cartesian.y;
-    float z = e.cartesian.z ;
-    float ctheta = cos(e.angular.x) ;
-    float stheta = sin(e.angular.x) ;
-    float cphi = cos(e.angular.y) ;
-    float sphi = sin(e.angular.y) ;
-    float cpsi = cos(e.angular.z) ;
-    float spsi = sin(e.angular.z) ;
+    double x = e.cartesian.x ;
+    double y = e.cartesian.y;
+    double z = e.cartesian.z ;
+    double ctheta = cos(e.angular.x) ;
+    double stheta = sin(e.angular.x) ;
+    double cphi = cos(e.angular.y) ;
+    double sphi = sin(e.angular.y) ;
+    double cpsi = cos(e.angular.z) ;
+    double spsi = sin(e.angular.z) ;
 
     EuclideanPoint p_camera ;
     p_camera.x = cphi * cpsi * X - cphi * spsi * Y +
@@ -41,7 +41,7 @@ transformWorldToCamera(EuclideanPoint p_world, Extrinsics e){
     p_camera.vy = (ctheta * spsi + stheta * sphi * cpsi) * VX
             + (ctheta * cpsi - stheta * sphi * spsi) * VY
             - stheta * cphi * VZ ;
-    p_camera.z = (stheta * spsi - ctheta * sphi * cpsi) * VX
+    p_camera.vz = (stheta * spsi - ctheta * sphi * cpsi) * VX
             + (stheta * cpsi + ctheta * sphi * spsi) * VY
             + ctheta * cphi * VZ ;
 
@@ -51,23 +51,23 @@ transformWorldToCamera(EuclideanPoint p_world, Extrinsics e){
 __host__ __device__
 EuclideanPoint
 transformCameraToWorld(EuclideanPoint p_camera, Extrinsics e){
-    float X = p_camera.x ;
-    float Y = p_camera.y ;
-    float Z = p_camera.z ;
-    float VX = p_camera.vx ;
-    float VY = p_camera.vy ;
-    float VZ = p_camera.vz ;
+    double X = p_camera.x ;
+    double Y = p_camera.y ;
+    double Z = p_camera.z ;
+    double VX = p_camera.vx ;
+    double VY = p_camera.vy ;
+    double VZ = p_camera.vz ;
 
     EuclideanPoint p_world ;
-    float x = e.cartesian.x ;
-    float y = e.cartesian.y;
-    float z = e.cartesian.z ;
-    float ctheta = cos(e.angular.x) ;
-    float stheta = sin(e.angular.x) ;
-    float cphi = cos(e.angular.y) ;
-    float sphi = sin(e.angular.y) ;
-    float cpsi = cos(e.angular.z) ;
-    float spsi = sin(e.angular.z) ;
+    double x = e.cartesian.x ;
+    double y = e.cartesian.y;
+    double z = e.cartesian.z ;
+    double ctheta = cos(e.angular.x) ;
+    double stheta = sin(e.angular.x) ;
+    double cphi = cos(e.angular.y) ;
+    double sphi = sin(e.angular.y) ;
+    double cpsi = cos(e.angular.z) ;
+    double spsi = sin(e.angular.z) ;
 
     p_world.x = cphi * cpsi * X
             + (ctheta * spsi + stheta * sphi * cpsi) * Y
@@ -104,7 +104,7 @@ DisparityMeasurementModel::DisparityMeasurementModel()
 
 
 __host__ __device__
-DisparityMeasurementModel::DisparityMeasurementModel(float fx, float fy, float u0, float v0, float std_u, float std_v, float pd, float lambda)
+DisparityMeasurementModel::DisparityMeasurementModel(double fx, double fy, double u0, double v0, double std_u, double std_v, double pd, double lambda)
     : fx_(fx), fy_(fy), u0_(u0), v0_(v0), std_u_(std_u), std_v_(std_v), pd_(pd)
 {
     img_height_ = (2*v0) ;
@@ -115,12 +115,12 @@ DisparityMeasurementModel::DisparityMeasurementModel(float fx, float fy, float u
 
 __host__ __device__ DisparityPoint
 DisparityMeasurementModel::computeMeasurement(EuclideanPoint p_world){
-    float x = p_world.x ;
-    float y = p_world.y ;
-    float z = p_world.z ;
-    float vx = p_world.vx ;
-    float vy = p_world.vy ;
-    float vz = p_world.vz ;
+    double x = p_world.x ;
+    double y = p_world.y ;
+    double z = p_world.z ;
+    double vx = p_world.vx ;
+    double vy = p_world.vy ;
+    double vz = p_world.vz ;
 
     DisparityPoint p ;
     p.u = u0_ - fx_/z*x ;
@@ -136,17 +136,24 @@ DisparityMeasurementModel::computeMeasurement(EuclideanPoint p_world){
 __host__ __device__ DisparityPoint
 DisparityMeasurementModel::computeMeasurement(EuclideanPoint p_world, Extrinsics e){
     EuclideanPoint p_camera = transformWorldToCamera(p_world,e) ;
+//    printf ("world_point = %f %f %f\ncamera point = %f %f %f\n",
+//            p_world.x,
+//            p_world.y,
+//            p_world.z,
+//            p_camera.x,
+//            p_camera.y,
+//            p_camera.z) ;
     return computeMeasurement(p_camera) ;
 }
 
 __host__ __device__ EuclideanPoint
 DisparityMeasurementModel::invertMeasurement(DisparityPoint p_disparity, Extrinsics e){
-    float u = p_disparity.u ;
-    float v = p_disparity.v ;
-    float d = p_disparity.d ;
-    float vu = p_disparity.vu ;
-    float vv = p_disparity.vv ;
-    float vd = p_disparity.vd ;
+    double u = p_disparity.u ;
+    double v = p_disparity.v ;
+    double d = p_disparity.d ;
+    double vu = p_disparity.vu ;
+    double vv = p_disparity.vv ;
+    double vd = p_disparity.vd ;
 
     EuclideanPoint p_camera ;
     p_camera.x = (u - u0_)/d ;
@@ -159,3 +166,8 @@ DisparityMeasurementModel::invertMeasurement(DisparityPoint p_disparity, Extrins
     EuclideanPoint p_world = transformCameraToWorld(p_camera,e) ;
     return p_world ;
 }
+
+//__host__ __device__ bool
+//DisparityMeasurementModel::checkVisibility(EuclideanPoint p_world, Extrinsics e){
+
+//}
