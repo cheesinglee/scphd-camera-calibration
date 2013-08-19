@@ -594,6 +594,8 @@ computeDetectionsKernel(Gaussian6D* features, double* u, double* v, double* pd,
         f_update.cov[34] = -K[4] * (-p[0] * K[5] - p[6] * K[11] + p[30]) - K[10] * (-p[1] * K[5] - p[7] * K[11] + p[31]) - p[4] * K[5] - p[10] * K[11] + p[34] + K[4] * var_u * K[5] + K[10] * var_v * K[11];
         f_update.cov[35] = -K[5] * (-p[0] * K[5] - p[6] * K[11] + p[30]) - K[11] * (-p[1] * K[5] - p[7] * K[11] + p[31]) - p[5] * K[5] - p[11] * K[11] + p[35] + var_u * K[5]*K[5] + var_v *  K[11]*K[11];
 
+        if (!isPosDef(f_update))
+            f_update.weight = safeLog(0) ;
 
         detections[idx_detect] = f_update ;
         measure_indices[idx_detect] = idx_measure ;
@@ -646,8 +648,13 @@ updateKernel(Gaussian6D* detections, Gaussian6D* births,
 
         if (feature.weight < min_weight)
             merge_flags[idx_update] = true ;
+        else if(!isPosDef(feature)){
+            printf("deactivating non PD feature (weight = %f)\n",feature.weight) ;
+            merge_flags[idx_update] = true ;
+        }
         else
             merge_flags[idx_update] = false ;
+
     }
 }
 
@@ -835,6 +842,7 @@ phdUpdateMergeKernel(Gaussian6D* updated_features,
                         mergedFeature.cov[j] = sdata[0]/mergedFeature.weight ;
                     __syncthreads() ;
                 }
+
                 if ( tid == 0 )
                 {
 //                    printf("saving merged feature\n") ;
@@ -846,10 +854,15 @@ phdUpdateMergeKernel(Gaussian6D* updated_features,
                     }
                     else
                     {
-                        printf("discarding non PD feature\n") ;
+                        printf("discarding non PD feature (w = %f)\n",mergedFeature.weight) ;
+                        // TODO: bad hack, just keep the max feature
+                        int mergeIdx = update_offset + mergedSize ;
+                        copy_gaussians(maxFeature,mergedFeatures[mergeIdx]) ;
+                        mergedSize++ ;
                     }
                 }
                 __syncthreads() ;
+
             }
             __syncthreads() ;
             // save the merged map size
@@ -926,8 +939,8 @@ interleaveKernel(T* items1, T* items2, int* offsets_vec1, int* offsets_vec2,
                  int n_segments, int n_items,
                  T* combined, int* indices_combined)
 {
-    int tid = threadIdx.x + blockIdx.x*blockDim.x ;
-    if ( tid < n_items ){
+    int tid0 = threadIdx.x + blockIdx.x*blockDim.x ;
+    for ( int tid = tid0 ; tid < n_items ; tid+=gridDim.x*blockDim.x){
         int idx = 0 ;
         bool copy2 = false ;
 
@@ -958,6 +971,21 @@ interleaveKernel(T* items1, T* items2, int* offsets_vec1, int* offsets_vec2,
             combined[tid] = items2[idx] ;
         else
             combined[tid] = items1[idx] ;
+    }
+}
+
+
+/// expand values
+/// example: values = {1,2,3,4} , factor = 3
+///          expanded = {1,1,1,2,2,2,3,3,3,4,4,4} ;
+/// launch config: total threads >= expanded count
+__global__ void
+expandKernel(double* values, int n_original, int factor, double* expanded){
+    int tid0 = threadIdx.x + blockIdx.x*blockDim.x ;
+    int stride = blockDim.x*gridDim.x ;
+    for ( int tid = tid0 ; tid < n_original*factor ; tid += stride){
+        int idx = floor(double(tid)/factor) ;
+        expanded[tid] = values[idx] ;
     }
 }
 

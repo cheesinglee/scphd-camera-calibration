@@ -65,6 +65,9 @@ phdUpdateMergeKernel(Gaussian6D* updated_features,
 //                        int n_features, Gaussian6D* features_combined,
 //                        int* indices_combined) ;
 
+__global__ void
+expandKernel(double* values, int n_original, int factor, double* expanded) ;
+
 template <typename T>
 __global__ void
 interleaveKernel(T* items1, T* items2,

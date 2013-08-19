@@ -8,10 +8,12 @@
 // models - one for the cartesian portion of the state and another for the
 // angular portion
 
+#include "device_math.cuh"
+
 class OrientedLinearCVMotionModel3D
 {
 public:
-    OrientedLinearCVMotionModel3D(){} ;
+    OrientedLinearCVMotionModel3D(){}
 
     OrientedLinearCVMotionModel3D(double ax, double ay, double az,
                                   double ax_angular, double ay_angular,
@@ -29,6 +31,10 @@ public:
                        double dt){
         cartesian_state = cartesian_model_.computeMotion(cartesian_state,dt) ;
         angular_state = angular_model_.computeMotion(angular_state,dt) ;
+
+        angular_state.x = wrapAngle(angular_state.x) ;
+        angular_state.y = wrapAngle(angular_state.y) ;
+        angular_state.z = wrapAngle(angular_state.z) ;
     }
 
     __host__ __device__
@@ -41,6 +47,10 @@ public:
                     cartesian_state,dt,ax_c,ay_c,az_c) ;
         angular_state = angular_model_.computeNoisyMotion(
                     angular_state,dt,ax_a,ay_a,az_a) ;
+
+        angular_state.x = wrapAngle(angular_state.x) ;
+        angular_state.y = wrapAngle(angular_state.y) ;
+        angular_state.z = wrapAngle(angular_state.z) ;
     }
 
     double std_ax_cartesian() { return cartesian_model_.std_ax() ; }

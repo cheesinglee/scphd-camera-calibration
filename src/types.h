@@ -139,5 +139,14 @@ typedef struct{
     EuclideanPoint angular ;
 } Extrinsics ;
 
+typedef struct{
+    double f ;
+    double du ;
+    double dv ;
+    double u0 ;
+    double v0 ;
+    double alpha ;
+} Intrinsics ;
+
 
 #endif // TYPES_H

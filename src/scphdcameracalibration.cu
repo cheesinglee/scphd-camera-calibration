@@ -843,68 +843,139 @@ SCPHDCameraCalibration::SCPHDCameraCalibration(const char* config_file)
     const Setting& prior_cartesian = config_.lookup("prior.cartesian") ;
     const Setting& prior_angular = config_.lookup("prior.angular") ;
 
-    EuclideanPoint prior_mean_cartesian ;
-    prior_mean_cartesian.x = prior_cartesian["x"]["mean"] ;
-    prior_mean_cartesian.y = prior_cartesian["y"]["mean"] ;
-    prior_mean_cartesian.z = prior_cartesian["z"]["mean"] ;
-    prior_mean_cartesian.vx = prior_cartesian["vx"]["mean"] ;
-    prior_mean_cartesian.vy = prior_cartesian["vy"]["mean"] ;
-    prior_mean_cartesian.vz = prior_cartesian["vz"]["mean"] ;
+//    EuclideanPoint prior_mean_cartesian ;
+//    prior_mean_cartesian.x = prior_cartesian["x"]["mean"] ;
+//    prior_mean_cartesian.y = prior_cartesian["y"]["mean"] ;
+//    prior_mean_cartesian.z = prior_cartesian["z"]["mean"] ;
+//    prior_mean_cartesian.vx = prior_cartesian["vx"]["mean"] ;
+//    prior_mean_cartesian.vy = prior_cartesian["vy"]["mean"] ;
+//    prior_mean_cartesian.vz = prior_cartesian["vz"]["mean"] ;
 
-    EuclideanPoint prior_std_cartesian ;
-    prior_std_cartesian.x = prior_cartesian["x"]["std"] ;
-    prior_std_cartesian.y = prior_cartesian["y"]["std"] ;
-    prior_std_cartesian.z = prior_cartesian["z"]["std"] ;
-    prior_std_cartesian.vx = prior_cartesian["vx"]["std"] ;
-    prior_std_cartesian.vy = prior_cartesian["vy"]["std"] ;
-    prior_std_cartesian.vz = prior_cartesian["vz"]["std"] ;
+//    EuclideanPoint prior_std_cartesian ;
+//    prior_std_cartesian.x = prior_cartesian["x"]["std"] ;
+//    prior_std_cartesian.y = prior_cartesian["y"]["std"] ;
+//    prior_std_cartesian.z = prior_cartesian["z"]["std"] ;
+//    prior_std_cartesian.vx = prior_cartesian["vx"]["std"] ;
+//    prior_std_cartesian.vy = prior_cartesian["vy"]["std"] ;
+//    prior_std_cartesian.vz = prior_cartesian["vz"]["std"] ;
 
-    EuclideanPoint prior_mean_angular ;
-    prior_mean_angular.x = prior_angular["x"]["mean"] ;
-    prior_mean_angular.y = prior_angular["y"]["mean"] ;
-    prior_mean_angular.z = prior_angular["z"]["mean"] ;
-    prior_mean_angular.vx = prior_angular["vx"]["mean"] ;
-    prior_mean_angular.vy = prior_angular["vy"]["mean"] ;
-    prior_mean_angular.vz = prior_angular["vz"]["mean"] ;
+//    EuclideanPoint prior_mean_angular ;
+//    prior_mean_angular.x = prior_angular["x"]["mean"] ;
+//    prior_mean_angular.y = prior_angular["y"]["mean"] ;
+//    prior_mean_angular.z = prior_angular["z"]["mean"] ;
+//    prior_mean_angular.vx = prior_angular["vx"]["mean"] ;
+//    prior_mean_angular.vy = prior_angular["vy"]["mean"] ;
+//    prior_mean_angular.vz = prior_angular["vz"]["mean"] ;
 
-    EuclideanPoint prior_std_angular ;
-    prior_std_angular.x = prior_angular["x"]["std"] ;
-    prior_std_angular.y = prior_angular["y"]["std"] ;
-    prior_std_angular.z = prior_angular["z"]["std"] ;
-    prior_std_angular.vx = prior_angular["vx"]["std"] ;
-    prior_std_angular.vy = prior_angular["vy"]["std"] ;
-    prior_std_angular.vz = prior_angular["vz"]["std"] ;
+//    EuclideanPoint prior_std_angular ;
+//    prior_std_angular.x = prior_angular["x"]["std"] ;
+//    prior_std_angular.y = prior_angular["y"]["std"] ;
+//    prior_std_angular.z = prior_angular["z"]["std"] ;
+//    prior_std_angular.vx = prior_angular["vx"]["std"] ;
+//    prior_std_angular.vy = prior_angular["vy"]["std"] ;
+//    prior_std_angular.vz = prior_angular["vz"]["std"] ;
+
+    EuclideanPoint prior_a_cartesian ;
+    prior_a_cartesian.x = prior_cartesian["x"]["a"] ;
+    prior_a_cartesian.y = prior_cartesian["y"]["a"] ;
+    prior_a_cartesian.z = prior_cartesian["z"]["a"] ;
+    prior_a_cartesian.vx = prior_cartesian["vx"]["a"] ;
+    prior_a_cartesian.vy = prior_cartesian["vy"]["a"] ;
+    prior_a_cartesian.vz = prior_cartesian["vz"]["a"] ;
+
+    EuclideanPoint prior_b_cartesian ;
+    prior_b_cartesian.x = prior_cartesian["x"]["b"] ;
+    prior_b_cartesian.y = prior_cartesian["y"]["b"] ;
+    prior_b_cartesian.z = prior_cartesian["z"]["b"] ;
+    prior_b_cartesian.vx = prior_cartesian["vx"]["b"] ;
+    prior_b_cartesian.vy = prior_cartesian["vy"]["b"] ;
+    prior_b_cartesian.vz = prior_cartesian["vz"]["b"] ;
+
+    EuclideanPoint prior_a_angular ;
+    prior_a_angular.x = prior_angular["x"]["a"] ;
+    prior_a_angular.y = prior_angular["y"]["a"] ;
+    prior_a_angular.z = prior_angular["z"]["a"] ;
+    prior_a_angular.vx = prior_angular["vx"]["a"] ;
+    prior_a_angular.vy = prior_angular["vy"]["a"] ;
+    prior_a_angular.vz = prior_angular["vz"]["a"] ;
+
+    EuclideanPoint prior_b_angular ;
+    prior_b_angular.x = prior_angular["x"]["b"] ;
+    prior_b_angular.y = prior_angular["y"]["b"] ;
+    prior_b_angular.z = prior_angular["z"]["b"] ;
+    prior_b_angular.vx = prior_angular["vx"]["b"] ;
+    prior_b_angular.vy = prior_angular["vy"]["b"] ;
+    prior_b_angular.vz = prior_angular["vz"]["b"] ;
 
     host_vector<Extrinsics> calibration_prior(n_particles_) ;
 
     thrust::default_random_engine rng ;
-    thrust::random::normal_distribution<double> randn(0.0,1.0) ;
+//    thrust::random::normal_distribution<double> randn(0.0,1.0) ;
+    thrust::random::uniform_real_distribution<double> rand(0.0,1.0) ;
     for ( int n = 0 ; n < n_particles_ ; n++ ){
-        calibration_prior[n].cartesian.x = randn(rng)*prior_std_cartesian.x
-                + prior_mean_cartesian.x;
-        calibration_prior[n].cartesian.y = randn(rng)*prior_std_cartesian.y
-                + prior_mean_cartesian.y ;
-        calibration_prior[n].cartesian.z = randn(rng)*prior_std_cartesian.z
-                + prior_mean_cartesian.z;
-        calibration_prior[n].cartesian.vx = randn(rng)*prior_std_cartesian.vx
-                + prior_mean_cartesian.vx;
-        calibration_prior[n].cartesian.vy = randn(rng)*prior_std_cartesian.vy
-                + prior_mean_cartesian.vy;
-        calibration_prior[n].cartesian.vz = randn(rng)*prior_std_cartesian.vz
-                + prior_mean_cartesian.vz;
+        calibration_prior[n].cartesian.x =
+                rand(rng)*(prior_b_cartesian.x-prior_a_cartesian.x)
+                + prior_a_cartesian.x ;
+        calibration_prior[n].cartesian.y =
+                rand(rng)*(prior_b_cartesian.y-prior_a_cartesian.y)
+                + prior_a_cartesian.y ;
+        calibration_prior[n].cartesian.z =
+                rand(rng)*(prior_b_cartesian.z-prior_a_cartesian.z)
+                + prior_a_cartesian.z ;
+        calibration_prior[n].cartesian.vx =
+                rand(rng)*(prior_b_cartesian.vx-prior_a_cartesian.vx)
+                + prior_a_cartesian.vx ;
+        calibration_prior[n].cartesian.vy =
+                rand(rng)*(prior_b_cartesian.vy-prior_a_cartesian.vy)
+                + prior_a_cartesian.vy ;
+        calibration_prior[n].cartesian.vz =
+                rand(rng)*(prior_b_cartesian.vz-prior_a_cartesian.vz)
+                + prior_a_cartesian.vz ;
 
-        calibration_prior[n].angular.x = randn(rng)*prior_std_angular.x
-                + prior_mean_angular.x;
-        calibration_prior[n].angular.y = randn(rng)*prior_std_angular.y
-                + prior_mean_angular.y ;
-        calibration_prior[n].angular.z = randn(rng)*prior_std_angular.z
-                + prior_mean_angular.z;
-        calibration_prior[n].angular.vx = randn(rng)*prior_std_angular.vx
-                + prior_mean_angular.vx;
-        calibration_prior[n].angular.vy = randn(rng)*prior_std_angular.vy
-                + prior_mean_angular.vy;
-        calibration_prior[n].angular.vz = randn(rng)*prior_std_angular.vz
-                + prior_mean_angular.vz;
+        calibration_prior[n].angular.x =
+                rand(rng)*(prior_b_angular.x-prior_a_angular.x)
+                + prior_a_angular.x ;
+        calibration_prior[n].angular.y =
+                rand(rng)*(prior_b_angular.y-prior_a_angular.y)
+                + prior_a_angular.y ;
+        calibration_prior[n].angular.z =
+                rand(rng)*(prior_b_angular.z-prior_a_angular.z)
+                + prior_a_angular.z ;
+        calibration_prior[n].angular.vx =
+                rand(rng)*(prior_b_angular.vx-prior_a_angular.vx)
+                + prior_a_angular.vx ;
+        calibration_prior[n].angular.vy =
+                rand(rng)*(prior_b_angular.vy-prior_a_angular.vy)
+                + prior_a_angular.vy ;
+        calibration_prior[n].angular.vz =
+                rand(rng)*(prior_b_angular.vz-prior_a_angular.vz)
+                + prior_a_angular.vz ;
+
+//        calibration_prior[n].cartesian.x = randn(rng)*prior_std_cartesian.x
+//                + prior_mean_cartesian.x;
+//        calibration_prior[n].cartesian.y = randn(rng)*prior_std_cartesian.y
+//                + prior_mean_cartesian.y ;
+//        calibration_prior[n].cartesian.z = randn(rng)*prior_std_cartesian.z
+//                + prior_mean_cartesian.z;
+//        calibration_prior[n].cartesian.vx = randn(rng)*prior_std_cartesian.vx
+//                + prior_mean_cartesian.vx;
+//        calibration_prior[n].cartesian.vy = randn(rng)*prior_std_cartesian.vy
+//                + prior_mean_cartesian.vy;
+//        calibration_prior[n].cartesian.vz = randn(rng)*prior_std_cartesian.vz
+//                + prior_mean_cartesian.vz;
+
+//        calibration_prior[n].angular.x = randn(rng)*prior_std_angular.x
+//                + prior_mean_angular.x;
+//        calibration_prior[n].angular.y = randn(rng)*prior_std_angular.y
+//                + prior_mean_angular.y ;
+//        calibration_prior[n].angular.z = randn(rng)*prior_std_angular.z
+//                + prior_mean_angular.z;
+//        calibration_prior[n].angular.vx = randn(rng)*prior_std_angular.vx
+//                + prior_mean_angular.vx;
+//        calibration_prior[n].angular.vy = randn(rng)*prior_std_angular.vy
+//                + prior_mean_angular.vy;
+//        calibration_prior[n].angular.vz = randn(rng)*prior_std_angular.vz
+//                + prior_mean_angular.vz;
     }
     dev_particle_states_ = calibration_prior ;
 
@@ -1248,15 +1319,24 @@ void SCPHDCameraCalibration::computeNonDetections()
 
     DEBUG_MSG("expand feature weight by number of particles") ;
 
-    host_vector<double> h_weights = dev_feature_weights_nondetect_ ;
-//    print_vector(h_weights) ;
-    host_vector<double> h_particle_weights(n_particles) ;
-    host_vector<double>::iterator it = h_particle_weights.begin() ;
-    for ( int n = 0; n < n_features ; n++ ){
-        it = thrust::fill_n(it,particles_per_feature_,h_weights[n]) ;
-    }
+    device_vector<double> d_particle_weights(n_particles) ;
+    int n_threads = 128 ;
+    int n_blocks = ceil(double(n_particles)/n_threads) ;
+    n_blocks = min(double(n_blocks),double(cuda_dev_props_.maxGridSize[0])) ;
+    expandKernel<<<n_blocks,n_threads>>>(
+            raw_pointer_cast(&dev_feature_weights_nondetect_[0]),
+            n_features,particles_per_feature_,
+            raw_pointer_cast(&d_particle_weights[0]));
 
-    device_vector<double> d_particle_weights = h_particle_weights ;
+//    host_vector<double> h_weights = dev_feature_weights_nondetect_ ;
+////    print_vector(h_weights) ;
+//    host_vector<double> h_particle_weights(n_particles) ;
+//    host_vector<double>::iterator it = h_particle_weights.begin() ;
+//    for ( int n = 0; n < n_features ; n++ ){
+//        it = thrust::fill_n(it,particles_per_feature_,h_weights[n]) ;
+//    }
+
+
 
     nvtxRangeEnd(nondetect_id);
     // keep if w*(1-pd) >= x ==> pd < (1-x)
@@ -1376,7 +1456,8 @@ void SCPHDCameraCalibration::recombineNonDetections()
 
         // launch the kernel
         int n_threads = 128 ;
-        int n_blocks = ceil(double(n_combined)/n_threads) ;
+        int n_blocks = min(ceil(double(n_combined)/n_threads),
+                           double(cuda_dev_props_.maxGridSize[0]));
         DEBUG_VAL(n_blocks) ;
 
         DEBUG_MSG("interleaveKernel") ;
@@ -1614,6 +1695,7 @@ void SCPHDCameraCalibration::update(vector<double> u, vector<double> v,
 
     dim3 nb ;
     nb.x = ceil((double)n_features/n_threads) ;
+    nb.x = min(double(nb.x),double(cuda_dev_props_.maxGridSize[0])) ;
     nb.y = n_measure ;
     nb.z = 1 ;
 
@@ -2126,13 +2208,13 @@ void SCPHDCameraCalibration::writeMat(const char *filename)
         particles_array.push_back(h_particle_states[n].cartesian.x);
         particles_array.push_back(h_particle_states[n].cartesian.y);
         particles_array.push_back(h_particle_states[n].cartesian.z);
-        particles_array.push_back(h_particle_states[n].cartesian.vz);
+        particles_array.push_back(h_particle_states[n].cartesian.vx);
         particles_array.push_back(h_particle_states[n].cartesian.vy);
         particles_array.push_back(h_particle_states[n].cartesian.vz);
         particles_array.push_back(h_particle_states[n].angular.x);
         particles_array.push_back(h_particle_states[n].angular.y);
         particles_array.push_back(h_particle_states[n].angular.z);
-        particles_array.push_back(h_particle_states[n].angular.vz);
+        particles_array.push_back(h_particle_states[n].angular.vx);
         particles_array.push_back(h_particle_states[n].angular.vy);
         particles_array.push_back(h_particle_states[n].angular.vz);
     }
@@ -2225,7 +2307,7 @@ void SCPHDCameraCalibration::writeMat(const char *filename)
             Mat_VarSetStructFieldByName(features,"particles",n,empty2) ;
         }
     }
-    Mat_VarWrite(matfp,features,MAT_COMPRESSION_NONE) ;
+    Mat_VarWrite(matfp,features,MAT_COMPRESSION_ZLIB) ;
     Mat_VarFree(features) ;
 
     if (config_.lookup("save_all_maps")){
@@ -2587,7 +2669,6 @@ void SCPHDCameraCalibration::resample()
     int i = 0 ;
     for ( int j = 0 ; j < n_particles_ ; j++ )
     {
-        r = j*interval + u01(rng)*interval ;
         while( r > c )
         {
             i++ ;

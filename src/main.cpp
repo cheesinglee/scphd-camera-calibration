@@ -74,15 +74,21 @@ int main(int argc, char* argv[])
     int max_steps = cfg.lookup("max_steps") ;
     int kmax = std::min(n_steps,max_steps) ;
 
+    bool do_slam = cfg.lookup("slam") ;
     for ( int k = 0 ; k < kmax ; k++){
         cout << "k = " << k << endl ;
 
         calibration.predict(0.5);
 
-        if ( (k % 2) == 0)
-            calibration.update(Z1[k].u,Z1[k].v,true);
-        else
+        if (do_slam){
             calibration.update(Z2[k].u,Z2[k].v,false);
+        }
+        else{
+            if ( (k % 2) == 0)
+                calibration.update(Z1[k].u,Z1[k].v,true);
+            else
+                calibration.update(Z2[k].u,Z2[k].v,false);
+        }
         stringstream ss ;
         ss << k << ".mat" ;
         calibration.writeMat(ss.str().data());

@@ -21,29 +21,60 @@ transformWorldToCamera(EuclideanPoint p_world, Extrinsics e){
     double spsi = sin(e.angular.z) ;
 
     EuclideanPoint p_camera ;
-    p_camera.x = cphi * cpsi * X - cphi * spsi * Y +
-            sphi * Z - cphi * cpsi * x +
-            cphi * spsi * y - sphi * z;
-    p_camera.y = (ctheta * spsi + stheta * sphi * cpsi) * X
+
+    p_camera.x = cphi * cpsi * X
+            + (ctheta * spsi + stheta * sphi * cpsi) * Y
+            + (stheta * spsi - ctheta * sphi * cpsi) * Z
+            - cphi*cpsi*x
+            - (ctheta*spsi + stheta*sphi*cpsi)*y
+            - (stheta*spsi - ctheta*sphi*cpsi)*z;
+    p_camera.y = -cphi * spsi * X
             + (ctheta * cpsi - stheta * sphi * spsi) * Y
-            - stheta * cphi * Z
-            - (ctheta * spsi + stheta * sphi * cpsi) * x
+            + (stheta * cpsi + ctheta * sphi * spsi) * Z
+            - (-cphi*spsi)*x
             - (ctheta * cpsi - stheta * sphi * spsi) * y
-            + stheta * cphi * z;
-    p_camera.z = (stheta * spsi - ctheta * sphi * cpsi) * X
-            + (stheta * cpsi + ctheta * sphi * spsi) * Y
+            - (stheta * cpsi + ctheta * sphi * spsi) * z ;
+    p_camera.z = sphi * X
+            - stheta * cphi * Y
             + ctheta * cphi * Z
-            - (stheta * spsi - ctheta * sphi * cpsi) * x
-            - (stheta * cpsi + ctheta * sphi * spsi) * y
-            - ctheta * cphi * z;
-    p_camera.vx = cphi * cpsi * VX - cphi * spsi * VY
-            + sphi * VZ ;
-    p_camera.vy = (ctheta * spsi + stheta * sphi * cpsi) * VX
+            - sphi *x
+            - (-stheta*cphi)*y
+            - (ctheta*cphi)*z ;
+
+    p_camera.vx = cphi * cpsi * VX
+            + (ctheta * spsi + stheta * sphi * cpsi) * VY
+            + (stheta * spsi - ctheta * sphi * cpsi) * VZ;
+    p_camera.vy = -cphi * spsi * VX
             + (ctheta * cpsi - stheta * sphi * spsi) * VY
-            - stheta * cphi * VZ ;
-    p_camera.vz = (stheta * spsi - ctheta * sphi * cpsi) * VX
-            + (stheta * cpsi + ctheta * sphi * spsi) * VY
+            + (stheta * cpsi + ctheta * sphi * spsi) * VZ ;
+    p_camera.vz = sphi * VX
+            - stheta * cphi * VY
             + ctheta * cphi * VZ ;
+
+
+//    p_camera.x = cphi * cpsi * X - cphi * spsi * Y +
+//            sphi * Z - cphi * cpsi * x +
+//            cphi * spsi * y - sphi * z;
+//    p_camera.y = (ctheta * spsi + stheta * sphi * cpsi) * X
+//            + (ctheta * cpsi - stheta * sphi * spsi) * Y
+//            - stheta * cphi * Z
+//            - (ctheta * spsi + stheta * sphi * cpsi) * x
+//            - (ctheta * cpsi - stheta * sphi * spsi) * y
+//            + stheta * cphi * z;
+//    p_camera.z = (stheta * spsi - ctheta * sphi * cpsi) * X
+//            + (stheta * cpsi + ctheta * sphi * spsi) * Y
+//            + ctheta * cphi * Z
+//            - (stheta * spsi - ctheta * sphi * cpsi) * x
+//            - (stheta * cpsi + ctheta * sphi * spsi) * y
+//            - ctheta * cphi * z;
+//    p_camera.vx = cphi * cpsi * VX - cphi * spsi * VY
+//            + sphi * VZ ;
+//    p_camera.vy = (ctheta * spsi + stheta * sphi * cpsi) * VX
+//            + (ctheta * cpsi - stheta * sphi * spsi) * VY
+//            - stheta * cphi * VZ ;
+//    p_camera.vz = (stheta * spsi - ctheta * sphi * cpsi) * VX
+//            + (stheta * cpsi + ctheta * sphi * spsi) * VY
+//            + ctheta * cphi * VZ ;
 
     return p_camera ;
 }
@@ -69,28 +100,46 @@ transformCameraToWorld(EuclideanPoint p_camera, Extrinsics e){
     double cpsi = cos(e.angular.z) ;
     double spsi = sin(e.angular.z) ;
 
-    p_world.x = cphi * cpsi * X
-            + (ctheta * spsi + stheta * sphi * cpsi) * Y
-            + (stheta * spsi - ctheta * sphi * cpsi) * Z
-            + x;
-    p_world.y = -cphi * spsi * X
+    p_world.x = cphi * cpsi * X - cphi * spsi * Y +
+            sphi * Z + x;
+    p_world.y = (ctheta * spsi + stheta * sphi * cpsi) * X
             + (ctheta * cpsi - stheta * sphi * spsi) * Y
-            + (stheta * cpsi + ctheta * sphi * spsi) * Z
-            + y;
-    p_world.z = sphi * X
-            - stheta * cphi * Y
-            + ctheta * cphi * Z
-            + z;
+            - stheta * cphi * Z + y;
+    p_world.z = (stheta * spsi - ctheta * sphi * cpsi) * X
+            + (stheta * cpsi + ctheta * sphi * spsi) * Y
+            + ctheta * cphi * Z + z;
 
-    p_world.vx = cphi * cpsi * VX
-            + (ctheta * spsi + stheta * sphi * cpsi) * VY
-            + (stheta * spsi - ctheta * sphi * cpsi) * VZ ;
-    p_world.vy = -cphi * spsi * VX
+    p_world.vx = cphi * cpsi * VX - cphi * spsi * VY
+            + sphi * VZ ;
+    p_world.vy = (ctheta * spsi + stheta * sphi * cpsi) * VX
             + (ctheta * cpsi - stheta * sphi * spsi) * VY
-            + (stheta * cpsi + ctheta * sphi * spsi) * VZ ;
-    p_world.vz = sphi * VX
-            - stheta * cphi * VY
+            - stheta * cphi * VZ ;
+    p_world.vz = (stheta * spsi - ctheta * sphi * cpsi) * VX
+            + (stheta * cpsi + ctheta * sphi * spsi) * VY
             + ctheta * cphi * VZ ;
+
+//    p_world.x = cphi * cpsi * X
+//            + (ctheta * spsi + stheta * sphi * cpsi) * Y
+//            + (stheta * spsi - ctheta * sphi * cpsi) * Z
+//            + x;
+//    p_world.y = -cphi * spsi * X
+//            + (ctheta * cpsi - stheta * sphi * spsi) * Y
+//            + (stheta * cpsi + ctheta * sphi * spsi) * Z
+//            + y;
+//    p_world.z = sphi * X
+//            - stheta * cphi * Y
+//            + ctheta * cphi * Z
+//            + z;
+
+//    p_world.vx = cphi * cpsi * VX
+//            + (ctheta * spsi + stheta * sphi * cpsi) * VY
+//            + (stheta * spsi - ctheta * sphi * cpsi) * VZ ;
+//    p_world.vy = -cphi * spsi * VX
+//            + (ctheta * cpsi - stheta * sphi * spsi) * VY
+//            + (stheta * cpsi + ctheta * sphi * spsi) * VZ ;
+//    p_world.vz = sphi * VX
+//            - stheta * cphi * VY
+//            + ctheta * cphi * VZ ;
     return p_world ;
 }
 
